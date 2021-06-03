@@ -1,0 +1,30 @@
+{
+  "name": "search",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@types/lodash": "^4.14.170",
+    "lodash": "^4.17.21"
+  },
+  "scripts": {
+    "watch": "tsc -w",
+    "start": "node ./dist/index.js",
+    "prettier": "prettier --write ./src",
+    "eslint": "eslint . --ext .ts"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "4",
+    "@typescript-eslint/parser": "^4.26.0",
+    "eslint": "7",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-config-standard": "^16.0.3",
+    "eslint-config-standard-with-typescript": "^20.0.0",
+    "eslint-plugin-import": "2",
+    "eslint-plugin-node": "11",
+    "eslint-plugin-promise": "4",
+    "playwright": "^1.11.1",
+    "prettier": "^2.3.0",
+    "typescript": "^4.3.2"
+  }
+}

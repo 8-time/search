@@ -1,0 +1,12 @@
+[
+  { 
+    "type": "facebook",
+    "username": "username1",
+    "password": "password2"
+  },
+  {
+    "type": "facebook",
+    "username": "username2",
+    "password": "password2"
+  }
+]
