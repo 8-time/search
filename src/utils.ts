@@ -1,11 +1,13 @@
 import { BrowserContext, Browser } from 'playwright';
 import * as fs from 'fs/promises';
-import { flatten, isEmpty, map, reduce } from 'lodash';
+import { groupBy, isEmpty, map, reduce, each, chunk, keys } from 'lodash';
 import {
   IUserCredentials,
   IBrowserContextByUserCredentials,
   ISearchRawData,
-  TYPES,
+  IUserCredentialsTypes,
+  ISearchStringsByBrowserContexts,
+  IGenerateSearchStringsBySearchRawData,
 } from './types';
 import { getStorageStateAfterFacebookLogin } from './facebook';
 
@@ -84,12 +86,10 @@ export const getBrowserContextsByUserCredentialsKey = async (
 
 export const generateSearchStringsBySearchRawData = (
   searchRawData: ISearchRawData[],
-): string[] => {
-  // const result: string[] = [];
-
+): IGenerateSearchStringsBySearchRawData => {
   const result = reduce(
     searchRawData,
-    (memo: string[], item) => {
+    (memo: IGenerateSearchStringsBySearchRawData, item) => {
       let firstSearchWords = [item.companyName];
 
       if (!isEmpty(item.productNames)) {
@@ -99,18 +99,17 @@ export const generateSearchStringsBySearchRawData = (
         );
       }
 
-      return memo.concat(
-        flatten(
-          map(firstSearchWords, (partOfSearch) =>
-            map(
-              item.incidentKeywords,
-              (incidentKeyword) => `${partOfSearch} ${incidentKeyword}`,
-            ),
-          ),
-        ),
+      each(firstSearchWords, (partOfSearch) =>
+        each(item.incidentKeywords, (incidentKeyword) => {
+          memo[`${partOfSearch} ${incidentKeyword}`] = {
+            companyName: item.companyName,
+          };
+        }),
       );
+
+      return memo;
     },
-    [],
+    {},
   );
 
   return result;
@@ -118,8 +117,35 @@ export const generateSearchStringsBySearchRawData = (
 
 export const getTypeForBrowserContextByUserCredentialsKey = (
   key: string,
-): TYPES | undefined => {
+): IUserCredentialsTypes | undefined => {
   if (key.includes('facebook-')) {
     return 'facebook';
   }
+};
+
+export const getSearchStringsByBrowserContexts = (
+  userCredentials: IUserCredentials[],
+  searchStrings: IGenerateSearchStringsBySearchRawData,
+): ISearchStringsByBrowserContexts => {
+  const groupedUserCredentialsByType = groupBy(userCredentials, 'type');
+  const searchStringsKeys = keys(searchStrings);
+  return reduce(
+    groupedUserCredentialsByType,
+    (memo: ISearchStringsByBrowserContexts, userCredentialsByType) => {
+      const sizeOfParts = userCredentialsByType.length;
+      const totalSize = searchStringsKeys.length;
+      const searchStringsByChanks =
+        sizeOfParts >= totalSize
+          ? [searchStringsKeys]
+          : chunk(searchStringsKeys, Math.ceil(totalSize / sizeOfParts));
+
+      each(userCredentialsByType, (userCredentialByType, index) => {
+        memo[getKeyByUserCredential(userCredentialByType)] =
+          searchStringsByChanks[index];
+      });
+
+      return memo;
+    },
+    {},
+  );
 };

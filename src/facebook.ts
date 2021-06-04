@@ -37,3 +37,13 @@ export const createFacebookUrlForSearch = (
     searchString,
   )}${filter}`;
 };
+
+export const grabAllLinksFromSearchPostPage = async (
+  browserContext: BrowserContext,
+  searchString: string,
+): Promise<void> => {
+  const page = await browserContext.newPage();
+  await page.goto(createFacebookUrlForSearch(searchString), {
+    waitUntil: 'networkidle',
+  });
+};

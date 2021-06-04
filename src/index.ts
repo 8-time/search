@@ -6,8 +6,9 @@ import {
   getBrowserContextsByUserCredentialsKey,
   generateSearchStringsBySearchRawData,
   getTypeForBrowserContextByUserCredentialsKey,
+  getSearchStringsByBrowserContexts,
 } from './utils';
-import { createFacebookUrlForSearch } from './facebook';
+import { grabAllLinksFromSearchPostPage } from './facebook';
 
 const start = async (): Promise<void> => {
   const userCredentials: IUserCredentials[] = JSON.parse(
@@ -17,20 +18,21 @@ const start = async (): Promise<void> => {
     await fs.readFile('searchRawData.json', 'utf-8'),
   );
 
-  const searchStrings = generateSearchStringsBySearchRawData(searchRawData);
-
   const browser = await chromium.launch({ headless: false, slowMo: 50 });
 
+  const searchStrings = generateSearchStringsBySearchRawData(searchRawData);
   const browserContextsByUserCredentialsKey =
     await getBrowserContextsByUserCredentialsKey(browser, userCredentials);
 
-  each(browserContextsByUserCredentialsKey, async (browserContext, key) => {
-    [searchStrings[0], searchStrings[1]].map(async (searchString) => {
+  const searchStringsByBrowserContexts = getSearchStringsByBrowserContexts(
+    userCredentials,
+    searchStrings,
+  );
+
+  each(browserContextsByUserCredentialsKey, (browserContext, key) => {
+    each(searchStringsByBrowserContexts[key], async (searchString) => {
       if (getTypeForBrowserContextByUserCredentialsKey(key) === 'facebook') {
-        const page = await browserContext.newPage();
-        await page.goto(createFacebookUrlForSearch(searchString), {
-          waitUntil: 'networkidle',
-        });
+        await grabAllLinksFromSearchPostPage(browserContext, searchString);
       }
     });
   });
