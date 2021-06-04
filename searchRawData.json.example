@@ -1,0 +1,13 @@
+[
+  {
+    "companyName": "companyName",
+    "productNames": [
+      "productNames1",
+      "productNames2"
+    ],
+    "incidentKeywords": [
+      "incidentKeywords1",
+      "incidentKeywords2"
+    ]
+  }
+]

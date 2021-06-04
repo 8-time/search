@@ -1,26 +1,38 @@
 import { chromium } from 'playwright';
 import * as fs from 'fs/promises';
-import { each, map } from 'lodash';
-import { getBrowserContextWithLoggedInStoregeState } from './utils';
-import { IUserCredentials } from './types';
+import { each } from 'lodash';
+import { IUserCredentials, ISearchRawData } from './types';
+import {
+  getBrowserContextsByUserCredentialsKey,
+  generateSearchStringsBySearchRawData,
+  getTypeForBrowserContextByUserCredentialsKey,
+} from './utils';
+import { createFacebookUrlForSearch } from './facebook';
 
 const start = async (): Promise<void> => {
   const userCredentials: IUserCredentials[] = JSON.parse(
-    await fs.readFile('config.json', 'utf-8'),
+    await fs.readFile('userCredentials.json', 'utf-8'),
   );
+  const searchRawData: ISearchRawData[] = JSON.parse(
+    await fs.readFile('searchRawData.json', 'utf-8'),
+  );
+
+  const searchStrings = generateSearchStringsBySearchRawData(searchRawData);
 
   const browser = await chromium.launch({ headless: false, slowMo: 50 });
 
-  const browserContexts = await Promise.all(
-    // eslint-disable-next-line @typescript-eslint/promise-function-async
-    map(userCredentials, (userCredential) =>
-      getBrowserContextWithLoggedInStoregeState(userCredential, browser),
-    ),
-  );
+  const browserContextsByUserCredentialsKey =
+    await getBrowserContextsByUserCredentialsKey(browser, userCredentials);
 
-  each(browserContexts, async (browserContext) => {
-    const page = await browserContext.newPage();
-    await page.goto('https://www.facebook.com/', { waitUntil: 'networkidle' });
+  each(browserContextsByUserCredentialsKey, async (browserContext, key) => {
+    [searchStrings[0], searchStrings[1]].map(async (searchString) => {
+      if (getTypeForBrowserContextByUserCredentialsKey(key) === 'facebook') {
+        const page = await browserContext.newPage();
+        await page.goto(createFacebookUrlForSearch(searchString), {
+          waitUntil: 'networkidle',
+        });
+      }
+    });
   });
 };
 

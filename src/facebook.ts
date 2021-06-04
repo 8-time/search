@@ -1,4 +1,5 @@
 import { BrowserContext } from 'playwright';
+import { FACEBOOK_FILTERS_STRING } from './constants';
 import { IUserCredentials } from './types';
 
 export const getStorageStateAfterFacebookLogin = async (
@@ -26,4 +27,13 @@ export const getStorageStateAfterFacebookLogin = async (
   console.log('getStorageStateAfterFacebookLogin', storage);
 
   return JSON.stringify(storage);
+};
+
+export const createFacebookUrlForSearch = (
+  searchString: string,
+  filter = FACEBOOK_FILTERS_STRING,
+): string => {
+  return `https://www.facebook.com/search/posts?q=${encodeURIComponent(
+    searchString,
+  )}${filter}`;
 };
