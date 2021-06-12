@@ -4,3 +4,4 @@ dist
 storageStateFor*.json
 userCredentials.json
 searchRawData.json
+out*.json

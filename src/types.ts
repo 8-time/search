@@ -21,6 +21,14 @@ export type ISearchStringsByBrowserContexts = {
   [key in string]: string[] | undefined;
 };
 
+export interface IGenerateSearchStringBySearchRawData {
+  companyName: string;
+}
+
 export type IGenerateSearchStringsBySearchRawData = {
-  [key in string]: { companyName: string };
+  [key in string]: IGenerateSearchStringBySearchRawData;
+};
+
+export type ILinksFromSearchPostPage = {
+  [key in string]: IGenerateSearchStringBySearchRawData;
 };

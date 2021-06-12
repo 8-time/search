@@ -1,6 +1,13 @@
 import { BrowserContext } from 'playwright';
-import { FACEBOOK_FILTERS_STRING } from './constants';
-import { IUserCredentials } from './types';
+import {
+  FACEBOOK_FILTERS_STRING,
+  FACEBOOK_AFTER_SEARCH_LINK_SELECTOR,
+} from './constants';
+import {
+  IUserCredentials,
+  IGenerateSearchStringsBySearchRawData,
+  ILinksFromSearchPostPage,
+} from './types';
 
 export const getStorageStateAfterFacebookLogin = async (
   userCredentials: IUserCredentials,
@@ -41,9 +48,28 @@ export const createFacebookUrlForSearch = (
 export const grabAllLinksFromSearchPostPage = async (
   browserContext: BrowserContext,
   searchString: string,
-): Promise<void> => {
-  const page = await browserContext.newPage();
-  await page.goto(createFacebookUrlForSearch(searchString), {
-    waitUntil: 'networkidle',
-  });
+  searchStringsBySearchRawData: IGenerateSearchStringsBySearchRawData,
+): Promise<ILinksFromSearchPostPage> => {
+  try {
+    const page = await browserContext.newPage();
+    await page.goto(createFacebookUrlForSearch(searchString), {
+      waitUntil: 'networkidle',
+    });
+
+    const linksElements = await page.$$(FACEBOOK_AFTER_SEARCH_LINK_SELECTOR);
+    const links: ILinksFromSearchPostPage = {};
+
+    for await (const link of linksElements) {
+      const key = await link.getAttribute('href');
+      if (key != null) {
+        links[key] = searchStringsBySearchRawData[searchString];
+      }
+    }
+
+    await page.close();
+    return links;
+  } catch (e) {
+    console.log('Error while grabAllLinksFromSearchPostPage', e);
+    return {};
+  }
 };
