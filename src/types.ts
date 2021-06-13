@@ -23,6 +23,7 @@ export type ISearchStringsByBrowserContexts = {
 
 export interface IGenerateSearchStringBySearchRawData {
   companyName: string;
+  searchString: string;
 }
 
 export type IGenerateSearchStringsBySearchRawData = {

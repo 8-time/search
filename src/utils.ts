@@ -103,6 +103,7 @@ export const generateSearchStringsBySearchRawData = (
         each(item.incidentKeywords, (incidentKeyword) => {
           memo[`${partOfSearch} ${incidentKeyword}`] = {
             companyName: item.companyName,
+            searchString: `${partOfSearch} ${incidentKeyword}`,
           };
         }),
       );
