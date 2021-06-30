@@ -4,3 +4,7 @@ export const FACEBOOK_FILTERS_STRING =
 export const FACEBOOK_AFTER_SEARCH_LINK_SELECTOR = 'a:has(img[width="90"])';
 
 export const OPEN_PAGES_SIZE_IN_PARRALEL = 2;
+
+export const INTERVAL_FOR_INSTAGRAM_TWO_FACTOR = 1000;
+
+export const MAX_TIME_FOR_INSTAGRAM_TWO_FACTOR = 5 * 1000;

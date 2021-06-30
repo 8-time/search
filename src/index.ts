@@ -18,6 +18,8 @@ import {
   getSearchStringsByBrowserContexts,
 } from './utils';
 import { grabAllLinksFromSearchPostPage } from './facebook';
+import { grabAllLinksFromSearchTagPage } from './instagram';
+
 import { OPEN_PAGES_SIZE_IN_PARRALEL } from './constants';
 
 const start = async (): Promise<void> => {
@@ -55,6 +57,17 @@ const start = async (): Promise<void> => {
             getTypeForBrowserContextByUserCredentialsKey(key) === 'facebook'
           ) {
             return await grabAllLinksFromSearchPostPage(
+              browserContextsByUserCredentialsKey[key],
+              searchString,
+              searchStringsBySearchRawData,
+            );
+          }
+
+          if (
+            getTypeForBrowserContextByUserCredentialsKey(key) === 'instagram'
+          ) {
+            // TODO: return links
+            await grabAllLinksFromSearchTagPage(
               browserContextsByUserCredentialsKey[key],
               searchString,
               searchStringsBySearchRawData,

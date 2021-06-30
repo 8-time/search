@@ -1,6 +1,6 @@
 import { BrowserContext } from 'playwright';
 
-export type IUserCredentialsTypes = 'facebook';
+export type IUserCredentialsTypes = 'facebook' | 'instagram';
 export interface IUserCredentials {
   type: IUserCredentialsTypes;
   username: string;

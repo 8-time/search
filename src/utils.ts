@@ -10,6 +10,7 @@ import {
   IGenerateSearchStringsBySearchRawData,
 } from './types';
 import { getStorageStateAfterFacebookLogin } from './facebook';
+import { getStorageStateAfterInstagramLogin } from './instagram';
 
 export const getNameForStorageStateByUserCredential = (
   userCredential: IUserCredentials,
@@ -44,6 +45,11 @@ export const getBrowserContextWithLoggedInStoregeState = async (
 
   if (userCredential.type === 'facebook') {
     storageState = await getStorageStateAfterFacebookLogin(
+      userCredential,
+      context,
+    );
+  } else if (userCredential.type === 'instagram') {
+    storageState = await getStorageStateAfterInstagramLogin(
       userCredential,
       context,
     );
@@ -121,6 +127,9 @@ export const getTypeForBrowserContextByUserCredentialsKey = (
 ): IUserCredentialsTypes | undefined => {
   if (key.includes('facebook-')) {
     return 'facebook';
+  }
+  if (key.includes('instagram-')) {
+    return 'instagram';
   }
 };
 
