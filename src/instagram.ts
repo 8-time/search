@@ -1,11 +1,19 @@
-import { BrowserContext } from 'playwright';
+import { BrowserContext, Page } from 'playwright';
+import map from 'lodash/map';
+import flatten from 'lodash/flatten';
+import uniq from 'lodash/uniq';
+import isEmpty from 'lodash/isEmpty';
+
 import {
   INTERVAL_FOR_INSTAGRAM_TWO_FACTOR,
   MAX_TIME_FOR_INSTAGRAM_TWO_FACTOR,
+  INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE,
 } from './constants';
 import {
   IUserCredentials,
-  IGenerateSearchStringsBySearchRawData,
+  IGenerateSearchStringsCompanyOrProductsBySearchRawData,
+  ILinksFromSearchTagPage,
+  IInstagramJsonResponse,
 } from './types';
 
 const waitForTwoFactor = async (): Promise<string> => {
@@ -24,10 +32,16 @@ const waitForTwoFactor = async (): Promise<string> => {
   });
 };
 
-export const createInstagramUrlForSearch = (searchString: string): string => {
+export const getTagByString = (searchString: string): string =>
+  searchString.toLowerCase().replace(/ /g, '');
+
+export const createInstagramUrlForSearch = (
+  searchString: string,
+  maxId?: string,
+): string => {
   return `https://www.instagram.com/explore/tags/${encodeURIComponent(
-    searchString.toLowerCase().replace(/ /g, ''),
-  )}?__a=1`;
+    getTagByString(searchString),
+  )}/?__a=1${maxId != null ? `&max_id=${maxId}` : ''}`;
 };
 
 export const getStorageStateAfterInstagramLogin = async (
@@ -83,26 +97,118 @@ export const getStorageStateAfterInstagramLogin = async (
   return JSON.stringify(storage);
 };
 
+export const makeRequest = async (
+  page: Page,
+  searchString: string,
+  maxId?: string,
+): Promise<null | IInstagramJsonResponse['data']> => {
+  const response = await page.goto(
+    createInstagramUrlForSearch(searchString, maxId),
+    {
+      waitUntil: 'networkidle',
+    },
+  );
+
+  if (response === null) {
+    return null;
+  }
+
+  const json = (await response.json()) as IInstagramJsonResponse;
+
+  if (json.data === undefined) {
+    return null;
+  }
+
+  return json.data;
+};
+
+async function* makeSeqOfRequest(
+  attemptNumber: number,
+  page: Page,
+  searchString: string,
+): AsyncGenerator<null | IInstagramJsonResponse['data'], null, void> {
+  let countOfAttempts = 0;
+  let maxId;
+  let data;
+
+  while (attemptNumber > countOfAttempts) {
+    data = await makeRequest(page, searchString, maxId);
+    if (data == null) {
+      countOfAttempts = attemptNumber;
+      yield null;
+    }
+
+    maxId = data?.recent.next_max_id;
+
+    if (data?.recent.more_available === false) {
+      countOfAttempts = attemptNumber;
+    }
+    countOfAttempts++;
+    yield data;
+  }
+
+  return null;
+}
+
 export const grabAllLinksFromSearchTagPage = async (
   browserContext: BrowserContext,
   searchString: string,
-  searchStringsBySearchRawData: IGenerateSearchStringsBySearchRawData,
-): Promise<void> => {
+  searchStringsBySearchRawData: IGenerateSearchStringsCompanyOrProductsBySearchRawData,
+): Promise<ILinksFromSearchTagPage> => {
   try {
-    console.log(searchStringsBySearchRawData[searchString]);
+    const links: ILinksFromSearchTagPage = {};
     const page = await browserContext.newPage();
-    await page.goto(
-      createInstagramUrlForSearch(
-        searchStringsBySearchRawData[searchString].companyName,
-      ),
-      {
-        waitUntil: 'networkidle',
-      },
+    const sections = [];
+
+    for await (const data of makeSeqOfRequest(
+      INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE,
+      page,
+      searchString,
+    )) {
+      if (data != null) {
+        sections.push(...data.recent.sections);
+      }
+    }
+
+    if (isEmpty(sections)) {
+      await page.close();
+      return links;
+    }
+
+    const medias = flatten(
+      map(sections, (section) => section.layout_content.medias),
     );
 
-    await page.waitForTimeout(15000);
+    map(medias, (media) => {
+      const regIncidentExp = new RegExp(
+        searchStringsBySearchRawData[searchString].incidentKeywords.join('|'),
+        'ig',
+      );
+
+      const regCompanyExp = new RegExp(
+        searchStringsBySearchRawData[searchString].companyName,
+        'ig',
+      );
+      if (
+        Boolean(media.media.caption) &&
+        Boolean(media.media.caption.text) &&
+        regCompanyExp.test(media.media.caption.text as string) &&
+        regIncidentExp.test(media.media.caption.text as string)
+      ) {
+        links[`https://www.instagram.com/p/${media.media.code}/`] = {
+          tag: getTagByString(searchString),
+          companyName: searchStringsBySearchRawData[searchString].companyName,
+          matchedIncidentKeywords: uniq(
+            (media.media.caption.text as string).match(regIncidentExp),
+          ),
+        };
+      }
+    });
+
+    await page.close();
+    return links;
   } catch (e) {
     console.log('Error while grabAllLinksFromSearchTagPage', e);
-    // return {};
+    return {};
   }
 };

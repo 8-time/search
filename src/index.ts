@@ -10,12 +10,14 @@ import {
   IUserCredentials,
   ISearchRawData,
   ILinksFromSearchPostPage,
+  ILinksFromSearchTagPage,
 } from './types';
 import {
   getBrowserContextsByUserCredentialsKey,
   generateSearchStringsBySearchRawData,
   getTypeForBrowserContextByUserCredentialsKey,
   getSearchStringsByBrowserContexts,
+  generateSearchStringsCompanyOrProductsBySearchRawData,
 } from './utils';
 import { grabAllLinksFromSearchPostPage } from './facebook';
 import { grabAllLinksFromSearchTagPage } from './instagram';
@@ -31,20 +33,36 @@ const start = async (): Promise<void> => {
   );
 
   const browser = await chromium.launch({ headless: true, slowMo: 10 });
+  const browserContextsByUserCredentialsKey =
+    await getBrowserContextsByUserCredentialsKey(browser, userCredentials);
 
   const searchStringsBySearchRawData =
     generateSearchStringsBySearchRawData(searchRawData);
-  const browserContextsByUserCredentialsKey =
-    await getBrowserContextsByUserCredentialsKey(browser, userCredentials);
+
+  const searchStringsCompanyOrProductsBySearchRawData =
+    generateSearchStringsCompanyOrProductsBySearchRawData(searchRawData);
 
   const searchStringsByBrowserContexts = getSearchStringsByBrowserContexts(
     userCredentials,
     searchStringsBySearchRawData,
   );
 
+  const searchStringsCompanyOrProductsByBrowserContexts =
+    getSearchStringsByBrowserContexts(
+      userCredentials,
+      searchStringsCompanyOrProductsBySearchRawData,
+    );
+
   const links: ILinksFromSearchPostPage = {};
 
-  console.log(size(searchStringsBySearchRawData));
+  console.log(
+    'searchStringsBySearchRawData',
+    size(searchStringsBySearchRawData),
+  );
+  console.log(
+    'searchStringsCompanyOrProductsBySearchRawData',
+    size(searchStringsCompanyOrProductsBySearchRawData),
+  );
 
   for await (const key of keys(browserContextsByUserCredentialsKey)) {
     for await (const searchStrings of chunk(
@@ -63,14 +81,37 @@ const start = async (): Promise<void> => {
             );
           }
 
+          return {};
+        }),
+      );
+
+      const linksHash = reduce(
+        linksArray,
+        (memo: ILinksFromSearchPostPage, item: ILinksFromSearchPostPage) => {
+          assign(memo, item);
+          return memo;
+        },
+        {},
+      );
+
+      assign(links, linksHash);
+    }
+  }
+
+  for await (const key of keys(browserContextsByUserCredentialsKey)) {
+    for await (const searchStrings of chunk(
+      searchStringsCompanyOrProductsByBrowserContexts[key],
+      OPEN_PAGES_SIZE_IN_PARRALEL,
+    )) {
+      const linksArray = await Promise.all(
+        map(searchStrings, async (searchString) => {
           if (
             getTypeForBrowserContextByUserCredentialsKey(key) === 'instagram'
           ) {
-            // TODO: return links
-            await grabAllLinksFromSearchTagPage(
+            return await grabAllLinksFromSearchTagPage(
               browserContextsByUserCredentialsKey[key],
               searchString,
-              searchStringsBySearchRawData,
+              searchStringsCompanyOrProductsBySearchRawData,
             );
           }
 
@@ -80,7 +121,7 @@ const start = async (): Promise<void> => {
 
       const linksHash = reduce(
         linksArray,
-        (memo: ILinksFromSearchPostPage, item: ILinksFromSearchPostPage) => {
+        (memo: ILinksFromSearchTagPage, item: ILinksFromSearchTagPage) => {
           assign(memo, item);
           return memo;
         },

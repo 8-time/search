@@ -8,6 +8,7 @@ import {
   IUserCredentialsTypes,
   ISearchStringsByBrowserContexts,
   IGenerateSearchStringsBySearchRawData,
+  IGenerateSearchStringsCompanyOrProductsBySearchRawData,
 } from './types';
 import { getStorageStateAfterFacebookLogin } from './facebook';
 import { getStorageStateAfterInstagramLogin } from './instagram';
@@ -122,6 +123,37 @@ export const generateSearchStringsBySearchRawData = (
   return result;
 };
 
+export const generateSearchStringsCompanyOrProductsBySearchRawData = (
+  searchRawData: ISearchRawData[],
+): IGenerateSearchStringsCompanyOrProductsBySearchRawData => {
+  const result = reduce(
+    searchRawData,
+    (memo: IGenerateSearchStringsCompanyOrProductsBySearchRawData, item) => {
+      let firstSearchWords = [item.companyName];
+
+      if (!isEmpty(item.productNames)) {
+        firstSearchWords = [
+          ...firstSearchWords,
+          ...(item.productNames as string[]),
+        ];
+      }
+
+      each(firstSearchWords, (searchString) => {
+        memo[searchString] = {
+          companyName: item.companyName,
+          incidentKeywords: item.incidentKeywords,
+          searchString: searchString,
+        };
+      });
+
+      return memo;
+    },
+    {},
+  );
+
+  return result;
+};
+
 export const getTypeForBrowserContextByUserCredentialsKey = (
   key: string,
 ): IUserCredentialsTypes | undefined => {
@@ -135,7 +167,9 @@ export const getTypeForBrowserContextByUserCredentialsKey = (
 
 export const getSearchStringsByBrowserContexts = (
   userCredentials: IUserCredentials[],
-  searchStrings: IGenerateSearchStringsBySearchRawData,
+  searchStrings:
+    | IGenerateSearchStringsBySearchRawData
+    | IGenerateSearchStringsCompanyOrProductsBySearchRawData,
 ): ISearchStringsByBrowserContexts => {
   const groupedUserCredentialsByType = groupBy(userCredentials, 'type');
   const searchStringsKeys = keys(searchStrings);
