@@ -8,6 +8,7 @@ import {
   IGenerateSearchStringsBySearchRawData,
   ILinksFromSearchPostPage,
 } from './types';
+import { getRandomDelayTimeInSecound } from './utils';
 
 export const getStorageStateAfterFacebookLogin = async (
   userCredentials: IUserCredentials,
@@ -22,6 +23,7 @@ export const getStorageStateAfterFacebookLogin = async (
   await page.goto('https://www.facebook.com/login', {
     waitUntil: 'networkidle',
   });
+  await page.waitForTimeout(getRandomDelayTimeInSecound(5000));
   await page.type('#email', userCredentials.username, { delay: 30 });
   await page.type('#pass', userCredentials.password, { delay: 30 });
   await page.click('#loginbutton');
@@ -55,6 +57,8 @@ export const grabAllLinksFromSearchPostPage = async (
     await page.goto(createFacebookUrlForSearch(searchString), {
       waitUntil: 'networkidle',
     });
+
+    await page.waitForTimeout(getRandomDelayTimeInSecound(3000));
 
     const linksElements = await page.$$(FACEBOOK_AFTER_SEARCH_LINK_SELECTOR);
     const links: ILinksFromSearchPostPage = {};

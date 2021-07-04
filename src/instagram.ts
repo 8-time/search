@@ -15,6 +15,7 @@ import {
   ILinksFromSearchTagPage,
   IInstagramJsonResponse,
 } from './types';
+import { getRandomDelayTimeInSecound } from './utils';
 
 const waitForTwoFactor = async (): Promise<string> => {
   const start = Date.now();
@@ -57,6 +58,7 @@ export const getStorageStateAfterInstagramLogin = async (
   await page.goto('https://www.instagram.com/', {
     waitUntil: 'networkidle',
   });
+  await page.waitForTimeout(getRandomDelayTimeInSecound(5000));
   await page.type('input[name="username"]', userCredentials.username, {
     delay: 30,
   });
@@ -109,6 +111,8 @@ export const makeRequest = async (
     },
   );
 
+  await page.waitForTimeout(getRandomDelayTimeInSecound());
+
   if (response === null) {
     return null;
   }
@@ -159,9 +163,12 @@ export const grabAllLinksFromSearchTagPage = async (
     const links: ILinksFromSearchTagPage = {};
     const page = await browserContext.newPage();
     const sections = [];
+    const attemptSize =
+      searchStringsBySearchRawData[searchString].searchOptions.instagram
+        .pageMaxAttemptsSize ?? INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE;
 
     for await (const data of makeSeqOfRequest(
-      INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE,
+      attemptSize,
       page,
       searchString,
     )) {

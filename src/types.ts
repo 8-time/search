@@ -7,7 +7,18 @@ export interface IUserCredentials {
   password: string;
 }
 
-export interface ISearchRawData {
+interface ISearchOptions {
+  searchOptions: {
+    instagram: {
+      enable: boolean;
+      pageMaxAttemptsSize?: number;
+    };
+    facebook: {
+      enable: boolean;
+    };
+  };
+}
+export interface ISearchRawData extends ISearchOptions {
   companyName: string;
   productNames?: string[];
   incidentKeywords: string[];
@@ -21,7 +32,7 @@ export type ISearchStringsByBrowserContexts = {
   [key in string]: string[] | undefined;
 };
 
-export interface IGenerateSearchStringBySearchRawData {
+export interface IGenerateSearchStringBySearchRawData extends ISearchOptions {
   companyName: string;
   searchString: string;
 }

@@ -12,6 +12,7 @@ import {
 } from './types';
 import { getStorageStateAfterFacebookLogin } from './facebook';
 import { getStorageStateAfterInstagramLogin } from './instagram';
+import { MAX_RANDOM_DELAY_TIME } from './constants';
 
 export const getNameForStorageStateByUserCredential = (
   userCredential: IUserCredentials,
@@ -41,6 +42,7 @@ export const getBrowserContextWithLoggedInStoregeState = async (
   }
 
   if (storageState.length > 0) {
+    // TODO: Add logic to check if context is still valid
     return await browser.newContext({ storageState: JSON.parse(storageState) });
   }
 
@@ -111,6 +113,7 @@ export const generateSearchStringsBySearchRawData = (
           memo[`${partOfSearch} ${incidentKeyword}`] = {
             companyName: item.companyName,
             searchString: `${partOfSearch} ${incidentKeyword}`,
+            searchOptions: item.searchOptions,
           };
         }),
       );
@@ -143,6 +146,7 @@ export const generateSearchStringsCompanyOrProductsBySearchRawData = (
           companyName: item.companyName,
           incidentKeywords: item.incidentKeywords,
           searchString: searchString,
+          searchOptions: item.searchOptions,
         };
       });
 
@@ -193,3 +197,7 @@ export const getSearchStringsByBrowserContexts = (
     {},
   );
 };
+
+export const getRandomDelayTimeInSecound = (
+  max = MAX_RANDOM_DELAY_TIME,
+): number => Math.floor(Math.random() * max);

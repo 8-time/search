@@ -32,7 +32,7 @@ const start = async (): Promise<void> => {
     await fs.readFile('searchRawData.json', 'utf-8'),
   );
 
-  const browser = await chromium.launch({ headless: true, slowMo: 10 });
+  const browser = await chromium.launch({ headless: false, slowMo: 10 });
   const browserContextsByUserCredentialsKey =
     await getBrowserContextsByUserCredentialsKey(browser, userCredentials);
 
@@ -72,7 +72,9 @@ const start = async (): Promise<void> => {
       const linksArray = await Promise.all(
         map(searchStrings, async (searchString) => {
           if (
-            getTypeForBrowserContextByUserCredentialsKey(key) === 'facebook'
+            getTypeForBrowserContextByUserCredentialsKey(key) === 'facebook' &&
+            searchStringsBySearchRawData[searchString].searchOptions.facebook
+              .enable
           ) {
             return await grabAllLinksFromSearchPostPage(
               browserContextsByUserCredentialsKey[key],
@@ -98,6 +100,8 @@ const start = async (): Promise<void> => {
     }
   }
 
+  console.log(links);
+
   for await (const key of keys(browserContextsByUserCredentialsKey)) {
     for await (const searchStrings of chunk(
       searchStringsCompanyOrProductsByBrowserContexts[key],
@@ -106,7 +110,9 @@ const start = async (): Promise<void> => {
       const linksArray = await Promise.all(
         map(searchStrings, async (searchString) => {
           if (
-            getTypeForBrowserContextByUserCredentialsKey(key) === 'instagram'
+            getTypeForBrowserContextByUserCredentialsKey(key) === 'instagram' &&
+            searchStringsCompanyOrProductsBySearchRawData[searchString]
+              .searchOptions.instagram.enable
           ) {
             return await grabAllLinksFromSearchTagPage(
               browserContextsByUserCredentialsKey[key],
@@ -127,9 +133,6 @@ const start = async (): Promise<void> => {
         },
         {},
       );
-
-      console.log(size(linksHash));
-      console.log(linksHash);
 
       assign(links, linksHash);
     }
