@@ -1,5 +1,11 @@
 import { BrowserContext } from 'playwright';
 
+declare global {
+  interface Window {
+    __initialData: any;
+  }
+}
+
 export type IUserCredentialsTypes = 'facebook' | 'instagram';
 export interface IUserCredentials {
   type: IUserCredentialsTypes;
@@ -15,6 +21,7 @@ interface ISearchOptions {
     };
     facebook: {
       enable: boolean;
+      pageMaxAttemptsSize?: number;
     };
   };
 }
@@ -77,15 +84,16 @@ export interface IInstagramJsonResponseSection {
 }
 export type IInstagramJsonResponseSections = IInstagramJsonResponseSection[];
 
+export interface IInstagramJsonResponseResent {
+  sections: IInstagramJsonResponseSections;
+  more_available: boolean;
+  next_max_id: string;
+}
 export interface IInstagramJsonResponse {
   data?: {
-    top: {
+    top?: {
       sections?: IInstagramJsonResponseSections;
     };
-    recent: {
-      sections: IInstagramJsonResponseSections;
-      more_available: boolean;
-      next_max_id: string;
-    };
+    recent: IInstagramJsonResponseResent;
   };
 }

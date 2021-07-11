@@ -2,7 +2,6 @@ import { chromium } from 'playwright';
 import * as fs from 'fs/promises';
 import map from 'lodash/map';
 import keys from 'lodash/keys';
-import size from 'lodash/size';
 import assign from 'lodash/assign';
 import reduce from 'lodash/reduce';
 import chunk from 'lodash/chunk';
@@ -11,6 +10,7 @@ import {
   ISearchRawData,
   ILinksFromSearchPostPage,
   ILinksFromSearchTagPage,
+  IBrowserContextByUserCredentials,
 } from './types';
 import {
   getBrowserContextsByUserCredentialsKey,
@@ -24,83 +24,20 @@ import { grabAllLinksFromSearchTagPage } from './instagram';
 
 import { OPEN_PAGES_SIZE_IN_PARRALEL } from './constants';
 
-const start = async (): Promise<void> => {
-  const userCredentials: IUserCredentials[] = JSON.parse(
-    await fs.readFile('userCredentials.json', 'utf-8'),
-  );
-  const searchRawData: ISearchRawData[] = JSON.parse(
-    await fs.readFile('searchRawData.json', 'utf-8'),
-  );
-
-  const browser = await chromium.launch({ headless: false, slowMo: 10 });
-  const browserContextsByUserCredentialsKey =
-    await getBrowserContextsByUserCredentialsKey(browser, userCredentials);
-
-  const searchStringsBySearchRawData =
-    generateSearchStringsBySearchRawData(searchRawData);
-
+const grabLinksByCompanyOrProducts = async (
+  searchRawData: ISearchRawData[],
+  userCredentials: IUserCredentials[],
+  browserContextsByUserCredentialsKey: IBrowserContextByUserCredentials,
+): Promise<ILinksFromSearchPostPage> => {
+  const links: ILinksFromSearchPostPage = {};
   const searchStringsCompanyOrProductsBySearchRawData =
     generateSearchStringsCompanyOrProductsBySearchRawData(searchRawData);
-
-  const searchStringsByBrowserContexts = getSearchStringsByBrowserContexts(
-    userCredentials,
-    searchStringsBySearchRawData,
-  );
 
   const searchStringsCompanyOrProductsByBrowserContexts =
     getSearchStringsByBrowserContexts(
       userCredentials,
       searchStringsCompanyOrProductsBySearchRawData,
     );
-
-  const links: ILinksFromSearchPostPage = {};
-
-  console.log(
-    'searchStringsBySearchRawData',
-    size(searchStringsBySearchRawData),
-  );
-  console.log(
-    'searchStringsCompanyOrProductsBySearchRawData',
-    size(searchStringsCompanyOrProductsBySearchRawData),
-  );
-
-  for await (const key of keys(browserContextsByUserCredentialsKey)) {
-    for await (const searchStrings of chunk(
-      searchStringsByBrowserContexts[key],
-      OPEN_PAGES_SIZE_IN_PARRALEL,
-    )) {
-      const linksArray = await Promise.all(
-        map(searchStrings, async (searchString) => {
-          if (
-            getTypeForBrowserContextByUserCredentialsKey(key) === 'facebook' &&
-            searchStringsBySearchRawData[searchString].searchOptions.facebook
-              .enable
-          ) {
-            return await grabAllLinksFromSearchPostPage(
-              browserContextsByUserCredentialsKey[key],
-              searchString,
-              searchStringsBySearchRawData,
-            );
-          }
-
-          return {};
-        }),
-      );
-
-      const linksHash = reduce(
-        linksArray,
-        (memo: ILinksFromSearchPostPage, item: ILinksFromSearchPostPage) => {
-          assign(memo, item);
-          return memo;
-        },
-        {},
-      );
-
-      assign(links, linksHash);
-    }
-  }
-
-  console.log(links);
 
   for await (const key of keys(browserContextsByUserCredentialsKey)) {
     for await (const searchStrings of chunk(
@@ -110,9 +47,7 @@ const start = async (): Promise<void> => {
       const linksArray = await Promise.all(
         map(searchStrings, async (searchString) => {
           if (
-            getTypeForBrowserContextByUserCredentialsKey(key) === 'instagram' &&
-            searchStringsCompanyOrProductsBySearchRawData[searchString]
-              .searchOptions.instagram.enable
+            getTypeForBrowserContextByUserCredentialsKey(key) === 'instagram'
           ) {
             return await grabAllLinksFromSearchTagPage(
               browserContextsByUserCredentialsKey[key],
@@ -138,8 +73,96 @@ const start = async (): Promise<void> => {
     }
   }
 
-  console.log(links);
+  return links;
+};
 
+const grabLinksByCompanyProductsIncidentKeywords = async (
+  searchRawData: ISearchRawData[],
+  userCredentials: IUserCredentials[],
+  browserContextsByUserCredentialsKey: IBrowserContextByUserCredentials,
+): Promise<ILinksFromSearchPostPage> => {
+  const links: ILinksFromSearchPostPage = {};
+
+  const searchStringsBySearchRawData =
+    generateSearchStringsBySearchRawData(searchRawData);
+
+  const searchStringsByBrowserContexts = getSearchStringsByBrowserContexts(
+    userCredentials,
+    searchStringsBySearchRawData,
+  );
+
+  for await (const key of keys(browserContextsByUserCredentialsKey)) {
+    for await (const searchStrings of chunk(
+      searchStringsByBrowserContexts[key],
+      OPEN_PAGES_SIZE_IN_PARRALEL,
+    )) {
+      const linksArray = await Promise.all(
+        map(searchStrings, async (searchString) => {
+          if (
+            getTypeForBrowserContextByUserCredentialsKey(key) === 'facebook'
+          ) {
+            return await grabAllLinksFromSearchPostPage(
+              browserContextsByUserCredentialsKey[key],
+              searchString,
+              searchStringsBySearchRawData,
+            );
+          }
+
+          return {};
+        }),
+      );
+
+      const linksHash = reduce(
+        linksArray,
+        (memo: ILinksFromSearchPostPage, item: ILinksFromSearchPostPage) => {
+          assign(memo, item);
+          return memo;
+        },
+        {},
+      );
+
+      assign(links, linksHash);
+    }
+  }
+
+  return links;
+};
+
+const start = async (): Promise<void> => {
+  const userCredentials: IUserCredentials[] = JSON.parse(
+    await fs.readFile('userCredentials.json', 'utf-8'),
+  );
+  const searchRawData: ISearchRawData[] = JSON.parse(
+    await fs.readFile('searchRawData.json', 'utf-8'),
+  );
+
+  const browser = await chromium.launch({ headless: false, slowMo: 10 });
+  const browserContextsByUserCredentialsKey =
+    await getBrowserContextsByUserCredentialsKey(browser, userCredentials);
+
+  const links: ILinksFromSearchPostPage = {};
+
+  const [linksByCompanyOrProducts, linksByCompanyProductsIncidentKeywords] =
+    await Promise.all([
+      grabLinksByCompanyOrProducts(
+        searchRawData,
+        userCredentials,
+        browserContextsByUserCredentialsKey,
+      ),
+      grabLinksByCompanyProductsIncidentKeywords(
+        searchRawData,
+        userCredentials,
+        browserContextsByUserCredentialsKey,
+      ),
+    ]);
+
+  assign(
+    links,
+    linksByCompanyOrProducts,
+    linksByCompanyProductsIncidentKeywords,
+  );
+
+  console.log(links);
   await fs.writeFile(
     `out[${new Date().toDateString()}].json`,
     JSON.stringify(links),

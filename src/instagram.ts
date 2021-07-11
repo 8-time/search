@@ -14,8 +14,9 @@ import {
   IGenerateSearchStringsCompanyOrProductsBySearchRawData,
   ILinksFromSearchTagPage,
   IInstagramJsonResponse,
+  IInstagramJsonResponseResent,
 } from './types';
-import { getRandomDelayTimeInSecound } from './utils';
+import { getRandomNumberToMax, scrollPageToBottom } from './utils';
 
 const waitForTwoFactor = async (): Promise<string> => {
   const start = Date.now();
@@ -36,13 +37,10 @@ const waitForTwoFactor = async (): Promise<string> => {
 export const getTagByString = (searchString: string): string =>
   searchString.toLowerCase().replace(/ /g, '');
 
-export const createInstagramUrlForSearch = (
-  searchString: string,
-  maxId?: string,
-): string => {
+export const createInstagramUrlForSearch = (searchString: string): string => {
   return `https://www.instagram.com/explore/tags/${encodeURIComponent(
     getTagByString(searchString),
-  )}/?__a=1${maxId != null ? `&max_id=${maxId}` : ''}`;
+  )}`;
 };
 
 export const getStorageStateAfterInstagramLogin = async (
@@ -58,7 +56,7 @@ export const getStorageStateAfterInstagramLogin = async (
   await page.goto('https://www.instagram.com/', {
     waitUntil: 'networkidle',
   });
-  await page.waitForTimeout(getRandomDelayTimeInSecound(5000));
+  await page.waitForTimeout(getRandomNumberToMax(5000));
   await page.type('input[name="username"]', userCredentials.username, {
     delay: 30,
   });
@@ -80,50 +78,23 @@ export const getStorageStateAfterInstagramLogin = async (
     });
     await page.click('button[type="button"]');
     await page.waitForNavigation({ waitUntil: 'networkidle' });
-    await page.waitForTimeout(15000);
+    await page.waitForTimeout(getRandomNumberToMax(10000));
   }
 
   if (page.url().includes('https://www.instagram.com/accounts/onetap')) {
     console.log('Instagram Login Onetap Page');
     await page.click('button[type="button"]');
     await page.waitForNavigation({ waitUntil: 'networkidle' });
-    await page.waitForTimeout(15000);
+    await page.waitForTimeout(getRandomNumberToMax(10000));
   }
 
-  await page.close();
-
   const storage = await context.storageState();
+  await page.waitForTimeout(getRandomNumberToMax(5000));
+  await page.close();
 
   console.log('getStorageStateAfterInstagramLogin', storage);
 
   return JSON.stringify(storage);
-};
-
-export const makeRequest = async (
-  page: Page,
-  searchString: string,
-  maxId?: string,
-): Promise<null | IInstagramJsonResponse['data']> => {
-  const response = await page.goto(
-    createInstagramUrlForSearch(searchString, maxId),
-    {
-      waitUntil: 'networkidle',
-    },
-  );
-
-  await page.waitForTimeout(getRandomDelayTimeInSecound());
-
-  if (response === null) {
-    return null;
-  }
-
-  const json = (await response.json()) as IInstagramJsonResponse;
-
-  if (json.data === undefined) {
-    return null;
-  }
-
-  return json.data;
 };
 
 async function* makeSeqOfRequest(
@@ -132,23 +103,42 @@ async function* makeSeqOfRequest(
   searchString: string,
 ): AsyncGenerator<null | IInstagramJsonResponse['data'], null, void> {
   let countOfAttempts = 0;
-  let maxId;
-  let data;
+
+  if (countOfAttempts === 0) {
+    await page.goto(createInstagramUrlForSearch(searchString), {
+      waitUntil: 'networkidle',
+    });
+    await page.waitForTimeout(getRandomNumberToMax(10000));
+
+    const resultHandle = await page.evaluateHandle(() => window.__initialData);
+    const initialData = await resultHandle.jsonValue();
+    await resultHandle.dispose();
+    const fisrtPageData = initialData.data.entry_data.TagPage[0].data;
+    yield fisrtPageData;
+  }
 
   while (attemptNumber > countOfAttempts) {
-    data = await makeRequest(page, searchString, maxId);
-    if (data == null) {
-      countOfAttempts = attemptNumber;
-      yield null;
+    const [request] = await Promise.all([
+      page.waitForRequest(/sections\//gi, { timeout: 0 }),
+      scrollPageToBottom(page),
+    ]);
+
+    const response = await request.response();
+
+    await page.waitForTimeout(getRandomNumberToMax(5000));
+
+    if (response === null) {
+      return null;
+    }
+    const json = (await response.json()) as IInstagramJsonResponseResent;
+
+    if (json.sections == null) {
+      return null;
     }
 
-    maxId = data?.recent.next_max_id;
-
-    if (data?.recent.more_available === false) {
-      countOfAttempts = attemptNumber;
-    }
     countOfAttempts++;
-    yield data;
+
+    yield { recent: json };
   }
 
   return null;

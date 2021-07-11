@@ -1,6 +1,15 @@
-import { BrowserContext, Browser } from 'playwright';
+import { BrowserContext, Browser, Page } from 'playwright';
 import * as fs from 'fs/promises';
-import { groupBy, isEmpty, map, reduce, each, chunk, keys } from 'lodash';
+import {
+  groupBy,
+  isEmpty,
+  map,
+  reduce,
+  each,
+  chunk,
+  keys,
+  assign,
+} from 'lodash';
 import {
   IUserCredentials,
   IBrowserContextByUserCredentials,
@@ -176,10 +185,26 @@ export const getSearchStringsByBrowserContexts = (
     | IGenerateSearchStringsCompanyOrProductsBySearchRawData,
 ): ISearchStringsByBrowserContexts => {
   const groupedUserCredentialsByType = groupBy(userCredentials, 'type');
-  const searchStringsKeys = keys(searchStrings);
+
   return reduce(
     groupedUserCredentialsByType,
     (memo: ISearchStringsByBrowserContexts, userCredentialsByType) => {
+      const searchStringsKeys = keys(
+        reduce(
+          searchStrings,
+          (memo, searchString, key) => {
+            if (
+              searchString.searchOptions[userCredentialsByType[0].type].enable
+            ) {
+              assign(memo, { [key]: searchString });
+            }
+
+            return memo;
+          },
+          {},
+        ),
+      );
+
       const sizeOfParts = userCredentialsByType.length;
       const totalSize = searchStringsKeys.length;
       const searchStringsByChanks =
@@ -198,6 +223,38 @@ export const getSearchStringsByBrowserContexts = (
   );
 };
 
-export const getRandomDelayTimeInSecound = (
-  max = MAX_RANDOM_DELAY_TIME,
-): number => Math.floor(Math.random() * max);
+export const getRandomNumberToMax = (max = MAX_RANDOM_DELAY_TIME): number =>
+  Math.floor(Math.random() * max);
+
+export async function scrollPageToBottom(
+  page: Page,
+  scrollDelay = getRandomNumberToMax(500),
+  scrollStep = getRandomNumberToMax(250),
+): Promise<void> {
+  return await page.evaluate(
+    ({ step, delay }) => {
+      const getScrollHeight = (element: any): number => {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+        if (!element) return 0;
+
+        const { scrollHeight, offsetHeight, clientHeight } = element;
+        return Math.max(scrollHeight, offsetHeight, clientHeight);
+      };
+
+      let count = 0;
+      const intervalId = setInterval(() => {
+        const { body } = document;
+        const availableScrollHeight = getScrollHeight(body);
+
+        window.scrollBy(0, step);
+        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
+        count += step;
+
+        if (count >= availableScrollHeight) {
+          clearInterval(intervalId);
+        }
+      }, delay);
+    },
+    { step: scrollStep, delay: scrollDelay },
+  );
+}
