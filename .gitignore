@@ -5,3 +5,5 @@ storageStateFor*.json
 userCredentials.json
 searchRawData.json
 out*.json
+out*.xlsx
+.DS_Store

@@ -5,7 +5,8 @@
   "license": "MIT",
   "dependencies": {
     "@types/lodash": "^4.14.170",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "xlsx": "^0.17.0"
   },
   "scripts": {
     "watch": "tsc -w",
@@ -23,7 +24,7 @@
     "eslint-plugin-import": "2",
     "eslint-plugin-node": "11",
     "eslint-plugin-promise": "4",
-    "playwright": "^1.12.3",
+    "playwright": "^1.14.0",
     "prettier": "^2.3.0",
     "typescript": "^4.3.2"
   }

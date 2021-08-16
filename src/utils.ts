@@ -10,6 +10,7 @@ import {
   keys,
   assign,
 } from 'lodash';
+import xlsx from 'xlsx';
 import {
   IUserCredentials,
   IBrowserContextByUserCredentials,
@@ -18,10 +19,11 @@ import {
   ISearchStringsByBrowserContexts,
   IGenerateSearchStringsBySearchRawData,
   IGenerateSearchStringsCompanyOrProductsBySearchRawData,
+  ILinksFromSearchPostPage,
 } from './types';
 import { getStorageStateAfterFacebookLogin } from './facebook';
 import { getStorageStateAfterInstagramLogin } from './instagram';
-import { MAX_RANDOM_DELAY_TIME } from './constants';
+import { ALLOW_GLOBAL } from './constants';
 
 export const getNameForStorageStateByUserCredential = (
   userCredential: IUserCredentials,
@@ -194,7 +196,9 @@ export const getSearchStringsByBrowserContexts = (
           searchStrings,
           (memo, searchString, key) => {
             if (
-              searchString.searchOptions[userCredentialsByType[0].type].enable
+              searchString.searchOptions[userCredentialsByType[0].type]
+                .enable &&
+              ALLOW_GLOBAL[userCredentialsByType[0].type]
             ) {
               assign(memo, { [key]: searchString });
             }
@@ -223,15 +227,16 @@ export const getSearchStringsByBrowserContexts = (
   );
 };
 
-export const getRandomNumberToMax = (max = MAX_RANDOM_DELAY_TIME): number =>
-  Math.floor(Math.random() * max);
+export const getRandomNumberToMax = (max: number, min: number): number =>
+  Math.floor(Math.random() * (max - min + 1) + min);
 
 export async function scrollPageToBottom(
   page: Page,
-  scrollDelay = getRandomNumberToMax(500),
-  scrollStep = getRandomNumberToMax(250),
+  scrollDelay = getRandomNumberToMax(500, 300),
+  scrollStep = getRandomNumberToMax(250, 20),
 ): Promise<void> {
   return await page.evaluate(
+    // eslint-disable-next-line @typescript-eslint/promise-function-async
     ({ step, delay }) => {
       const getScrollHeight = (element: any): number => {
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -241,20 +246,52 @@ export async function scrollPageToBottom(
         return Math.max(scrollHeight, offsetHeight, clientHeight);
       };
 
-      let count = 0;
-      const intervalId = setInterval(() => {
-        const { body } = document;
-        const availableScrollHeight = getScrollHeight(body);
+      return new Promise((resolve) => {
+        let count = 0;
+        const intervalId = setInterval(() => {
+          const { body } = document;
+          const availableScrollHeight = getScrollHeight(body);
 
-        window.scrollBy(0, step);
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-        count += step;
+          window.scrollBy(0, step);
+          count += Math.floor(Math.random() * step);
 
-        if (count >= availableScrollHeight) {
-          clearInterval(intervalId);
-        }
-      }, delay);
+          if (count >= availableScrollHeight || window.scrollY === 0) {
+            clearInterval(intervalId);
+            resolve();
+          }
+        }, delay);
+      });
     },
     { step: scrollStep, delay: scrollDelay },
   );
+}
+
+export async function writeOutputFiles(
+  links: ILinksFromSearchPostPage,
+): Promise<void> {
+  const name = `out[${new Date().toDateString()}]`;
+  await fs.writeFile(`${name}.json`, JSON.stringify(links), 'utf-8');
+  const newWB = xlsx.utils.book_new();
+  const newWS = xlsx.utils.json_to_sheet(
+    reduce(
+      links,
+      (memo, { companyName, searchString }, key) => {
+        memo.push({
+          Link: {
+            f: `HYPERLINK("${key}", "${key}")`,
+          },
+          'Company Name': companyName,
+          Search: searchString,
+        });
+        return memo;
+      },
+      [] as Array<{
+        Link: { f: string };
+        'Company Name': string;
+        Search: string;
+      }>,
+    ),
+  );
+  xlsx.utils.book_append_sheet(newWB, newWS, 'name');
+  xlsx.writeFile(newWB, `${name}.xlsx`);
 }

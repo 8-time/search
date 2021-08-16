@@ -8,6 +8,7 @@ import {
   INTERVAL_FOR_INSTAGRAM_TWO_FACTOR,
   MAX_TIME_FOR_INSTAGRAM_TWO_FACTOR,
   INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE,
+  MAX_TIME_FOR_INSTAGRAM_TIMEOUT,
 } from './constants';
 import {
   IUserCredentials,
@@ -56,7 +57,7 @@ export const getStorageStateAfterInstagramLogin = async (
   await page.goto('https://www.instagram.com/', {
     waitUntil: 'networkidle',
   });
-  await page.waitForTimeout(getRandomNumberToMax(5000));
+  await page.waitForTimeout(getRandomNumberToMax(5000, 2000));
   await page.type('input[name="username"]', userCredentials.username, {
     delay: 30,
   });
@@ -78,18 +79,18 @@ export const getStorageStateAfterInstagramLogin = async (
     });
     await page.click('button[type="button"]');
     await page.waitForNavigation({ waitUntil: 'networkidle' });
-    await page.waitForTimeout(getRandomNumberToMax(10000));
+    await page.waitForTimeout(getRandomNumberToMax(10000, 6000));
   }
 
   if (page.url().includes('https://www.instagram.com/accounts/onetap')) {
     console.log('Instagram Login Onetap Page');
     await page.click('button[type="button"]');
     await page.waitForNavigation({ waitUntil: 'networkidle' });
-    await page.waitForTimeout(getRandomNumberToMax(10000));
+    await page.waitForTimeout(getRandomNumberToMax(10000, 6000));
   }
 
   const storage = await context.storageState();
-  await page.waitForTimeout(getRandomNumberToMax(5000));
+  await page.waitForTimeout(getRandomNumberToMax(5000, 3000));
   await page.close();
 
   console.log('getStorageStateAfterInstagramLogin', storage);
@@ -107,8 +108,9 @@ async function* makeSeqOfRequest(
   if (countOfAttempts === 0) {
     await page.goto(createInstagramUrlForSearch(searchString), {
       waitUntil: 'networkidle',
+      timeout: MAX_TIME_FOR_INSTAGRAM_TIMEOUT,
     });
-    await page.waitForTimeout(getRandomNumberToMax(10000));
+    await page.waitForTimeout(getRandomNumberToMax(10000, 6000));
 
     const resultHandle = await page.evaluateHandle(() => window.__initialData);
     const initialData = await resultHandle.jsonValue();
@@ -118,14 +120,22 @@ async function* makeSeqOfRequest(
   }
 
   while (attemptNumber > countOfAttempts) {
-    const [request] = await Promise.all([
-      page.waitForRequest(/sections\//gi, { timeout: 0 }),
+    console.log('countOfAttempts', countOfAttempts);
+
+    const request = await Promise.race([
+      page.waitForRequest(/sections\//gi, {
+        timeout: MAX_TIME_FOR_INSTAGRAM_TIMEOUT,
+      }),
       scrollPageToBottom(page),
     ]);
 
+    if (request == null) {
+      return null;
+    }
+
     const response = await request.response();
 
-    await page.waitForTimeout(getRandomNumberToMax(5000));
+    await page.waitForTimeout(getRandomNumberToMax(5000, 1000));
 
     if (response === null) {
       return null;
@@ -157,14 +167,18 @@ export const grabAllLinksFromSearchTagPage = async (
       searchStringsBySearchRawData[searchString].searchOptions.instagram
         .pageMaxAttemptsSize ?? INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE;
 
-    for await (const data of makeSeqOfRequest(
-      attemptSize,
-      page,
-      searchString,
-    )) {
-      if (data != null) {
-        sections.push(...data.recent.sections);
+    try {
+      for await (const data of makeSeqOfRequest(
+        attemptSize,
+        page,
+        searchString,
+      )) {
+        if (data != null) {
+          sections.push(...data.recent.sections);
+        }
       }
+    } catch (e) {
+      console.log('Error makeSeqOfRequest', e);
     }
 
     if (isEmpty(sections)) {

@@ -18,6 +18,7 @@ import {
   getTypeForBrowserContextByUserCredentialsKey,
   getSearchStringsByBrowserContexts,
   generateSearchStringsCompanyOrProductsBySearchRawData,
+  writeOutputFiles,
 } from './utils';
 import { grabAllLinksFromSearchPostPage } from './facebook';
 import { grabAllLinksFromSearchTagPage } from './instagram';
@@ -136,7 +137,7 @@ const start = async (): Promise<void> => {
     await fs.readFile('searchRawData.json', 'utf-8'),
   );
 
-  const browser = await chromium.launch({ headless: false, slowMo: 10 });
+  const browser = await chromium.launch({ headless: true, slowMo: 10 });
   const browserContextsByUserCredentialsKey =
     await getBrowserContextsByUserCredentialsKey(browser, userCredentials);
 
@@ -163,11 +164,8 @@ const start = async (): Promise<void> => {
   );
 
   console.log(links);
-  await fs.writeFile(
-    `out[${new Date().toDateString()}].json`,
-    JSON.stringify(links),
-    'utf-8',
-  );
+
+  await writeOutputFiles(links);
 
   await browser.close();
 };
