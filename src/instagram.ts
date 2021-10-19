@@ -5,8 +5,8 @@ import uniq from 'lodash/uniq';
 import isEmpty from 'lodash/isEmpty';
 
 import {
-  INTERVAL_FOR_INSTAGRAM_TWO_FACTOR,
-  MAX_TIME_FOR_INSTAGRAM_TWO_FACTOR,
+  INTERVAL_FOR_TWO_FACTOR,
+  MAX_TIME_FOR_TWO_FACTOR,
   INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE,
   MAX_TIME_FOR_INSTAGRAM_TIMEOUT,
 } from './constants';
@@ -26,12 +26,12 @@ const waitForTwoFactor = async (): Promise<string> => {
     const interval = setInterval(() => {
       const spendedTime = Date.now() - start;
       console.log('waitForTwoFactor', spendedTime / 1000);
-      if (spendedTime >= MAX_TIME_FOR_INSTAGRAM_TWO_FACTOR) {
+      if (spendedTime >= MAX_TIME_FOR_TWO_FACTOR) {
         // TODO: get real code from DB
         clearInterval(interval);
         resolve('12345678');
       }
-    }, INTERVAL_FOR_INSTAGRAM_TWO_FACTOR);
+    }, INTERVAL_FOR_TWO_FACTOR);
   });
 };
 

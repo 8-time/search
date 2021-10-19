@@ -10,7 +10,13 @@ import {
   IGenerateSearchStringsBySearchRawData,
   ILinksFromSearchPostPage,
 } from './types';
-import { getRandomNumberToMax, scrollPageToBottom } from './utils';
+import {
+  getRandomNumberToMax,
+  isUserIsLogIn,
+  scrollPageToBottom,
+} from './utils';
+import { waitForTwoFactorCode } from './utils/two-factor';
+import { removeTwoFactorCode } from './db';
 
 export const getStorageStateAfterFacebookLogin = async (
   userCredentials: IUserCredentials,
@@ -20,23 +26,70 @@ export const getStorageStateAfterFacebookLogin = async (
   const pageContext = page.context();
   await pageContext.grantPermissions([]);
 
-  page.setDefaultNavigationTimeout(100000);
+  page.setDefaultNavigationTimeout(getRandomNumberToMax(200000, 100000));
 
   await page.goto('https://www.facebook.com/login', {
     waitUntil: 'networkidle',
   });
-  await page.waitForTimeout(getRandomNumberToMax(5000, 2000));
-  await page.type('#email', userCredentials.username, { delay: 30 });
-  await page.type('#pass', userCredentials.password, { delay: 30 });
+  await page.waitForTimeout(getRandomNumberToMax(15000, 3000));
+  await page.type('#email', userCredentials.username, {
+    delay: getRandomNumberToMax(30, 5),
+  });
+  await page.type('#pass', userCredentials.password, {
+    delay: getRandomNumberToMax(30, 5),
+  });
   await page.click('#loginbutton');
   await page.waitForNavigation({ waitUntil: 'networkidle' });
+
+  await page.waitForTimeout(getRandomNumberToMax(15000, 3000));
   await page.waitForTimeout(15000);
 
-  const storage = await context.storageState();
-  await page.waitForTimeout(getRandomNumberToMax(5000, 2000));
+
+
+  if (page.url().includes('https://www.facebook.com/checkpoint/?next')) {
+    console.log('Facebook Login Two Factor Page');
+    await page.click('#checkpointBottomBar a[role="button"]');
+    await page.waitForTimeout(getRandomNumberToMax(5000, 3000));
+
+    await page.click('a[role="button"]:near(.fbSettingsHangingMessage)');
+
+    await page.waitForTimeout(getRandomNumberToMax(5000, 3000));
+
+    await page.mouse.click(
+      getRandomNumberToMax(200, 100),
+      getRandomNumberToMax(200, 100),
+    );
+
+    const verificationCode = await waitForTwoFactorCode(userCredentials);
+
+
+    await removeTwoFactorCode(userCredentials.username, userCredentials.type);
+
+   
+    await page.type('input[name="approvals_code"]', verificationCode, {
+      delay: 30,
+    });
+
+    await page.waitForTimeout(getRandomNumberToMax(5000, 3000));
+
+
+    while (size(await page.$$('button[type="submit"]')) > 0) {
+      await page.click('button[type="submit"]');
+      await page.waitForTimeout(getRandomNumberToMax(10000, 6000));
+    }
+
+    await page.waitForTimeout(getRandomNumberToMax(10000, 6000));
+  }
+
+  if (!(await isUserIsLogIn(context, userCredentials.type))) {
+    throw new Error(
+      'Error in function getStorageStateAfterFacebookLogin not able to login user',
+    );
+  }
+  await page.waitForTimeout(getRandomNumberToMax(10000, 2000));
   await page.close();
 
-  console.log('getStorageStateAfterFacebookLogin', storage);
+  const storage = await context.storageState();
 
   return JSON.stringify(storage);
 };

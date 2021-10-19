@@ -5,16 +5,24 @@
   "license": "MIT",
   "dependencies": {
     "@types/lodash": "^4.14.170",
+    "@types/yargs": "^17.0.2",
+    "dotenv": "^10.0.0",
+    "knex": "^0.95.10",
     "lodash": "^4.17.21",
-    "xlsx": "^0.17.0"
+    "sqlite3": "^5.0.2",
+    "xlsx": "^0.17.0",
+    "yargs": "^17.1.1"
   },
   "scripts": {
     "watch": "tsc -w",
-    "start": "node ./dist/index.js",
+    "start": "DOTENV_CONFIG_PATH=./.env.local node -r dotenv/config ./dist/index.js",
+    "two-factor": "DOTENV_CONFIG_PATH=./.env.local node -r dotenv/config ./dist/scripts/two-factor.js",
     "prettier": "prettier --write ./src",
-    "eslint": "eslint . --ext .ts"
+    "eslint": "eslint . --ext .ts",
+    "migrate": "yarn knex migrate:latest --debug --knexfile ./dist/knexfile.js"
   },
   "devDependencies": {
+    "@types/sqlite3": "^3.1.7",
     "@typescript-eslint/eslint-plugin": "4",
     "@typescript-eslint/parser": "^4.26.0",
     "eslint": "7",
@@ -24,7 +32,7 @@
     "eslint-plugin-import": "2",
     "eslint-plugin-node": "11",
     "eslint-plugin-promise": "4",
-    "playwright": "^1.14.0",
+    "playwright": "^1.14.1",
     "prettier": "^2.3.0",
     "typescript": "^4.3.2"
   }

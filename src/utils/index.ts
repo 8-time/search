@@ -9,6 +9,7 @@ import {
   chunk,
   keys,
   assign,
+  size,
 } from 'lodash';
 import xlsx from 'xlsx';
 import {
@@ -20,10 +21,37 @@ import {
   IGenerateSearchStringsBySearchRawData,
   IGenerateSearchStringsCompanyOrProductsBySearchRawData,
   ILinksFromSearchPostPage,
-} from './types';
-import { getStorageStateAfterFacebookLogin } from './facebook';
-import { getStorageStateAfterInstagramLogin } from './instagram';
-import { ALLOW_GLOBAL } from './constants';
+} from '../types';
+import { getStorageStateAfterFacebookLogin } from '../facebook';
+import { getStorageStateAfterInstagramLogin } from '../instagram';
+import { ALLOW_GLOBAL, FACEBOOK_IS_LOG_IN_SELECTOR } from '../constants';
+
+export const isUserIsLogIn = async (
+  browserContext: BrowserContext,
+  type: IUserCredentialsTypes,
+): Promise<boolean> => {
+  if (type === 'facebook') {
+    const page = await browserContext.newPage();
+
+    await page.goto('https://www.facebook.com/', {
+      waitUntil: 'networkidle',
+    });
+
+    await page.waitForTimeout(getRandomNumberToMax(5000, 2000));
+
+    const elements = await page.$$(FACEBOOK_IS_LOG_IN_SELECTOR);
+
+    await page.close();
+
+    if (size(elements) > 0) {
+      return true;
+    }
+
+    return false;
+  }
+
+  return true;
+};
 
 export const getNameForStorageStateByUserCredential = (
   userCredential: IUserCredentials,
@@ -53,8 +81,13 @@ export const getBrowserContextWithLoggedInStoregeState = async (
   }
 
   if (storageState.length > 0) {
-    // TODO: Add logic to check if context is still valid
-    return await browser.newContext({ storageState: JSON.parse(storageState) });
+    const loadedContext = await browser.newContext({
+      storageState: JSON.parse(storageState),
+    });
+
+    if (await isUserIsLogIn(loadedContext, userCredential.type)) {
+      return loadedContext;
+    }
   }
 
   if (userCredential.type === 'facebook') {

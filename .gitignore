@@ -7,3 +7,5 @@ searchRawData.json
 out*.json
 out*.xlsx
 .DS_Store
+.env.local
+mydb.sqlite
