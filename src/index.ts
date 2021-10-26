@@ -137,7 +137,7 @@ const start = async (): Promise<void> => {
     await fs.readFile('searchRawData.json', 'utf-8'),
   );
 
-  const browser = await chromium.launch({ headless: true, slowMo: 10 });
+  const browser = await chromium.launch({ headless: false, slowMo: 10 });
   const browserContextsByUserCredentialsKey =
     await getBrowserContextsByUserCredentialsKey(browser, userCredentials);
 

@@ -5,8 +5,7 @@ import uniq from 'lodash/uniq';
 import isEmpty from 'lodash/isEmpty';
 
 import {
-  INTERVAL_FOR_TWO_FACTOR,
-  MAX_TIME_FOR_TWO_FACTOR,
+
   INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE,
   MAX_TIME_FOR_INSTAGRAM_TIMEOUT,
 } from './constants';
@@ -19,21 +18,8 @@ import {
 } from './types';
 import { getRandomNumberToMax, scrollPageToBottom } from './utils';
 
-const waitForTwoFactor = async (): Promise<string> => {
-  const start = Date.now();
-
-  return await new Promise((resolve, reject) => {
-    const interval = setInterval(() => {
-      const spendedTime = Date.now() - start;
-      console.log('waitForTwoFactor', spendedTime / 1000);
-      if (spendedTime >= MAX_TIME_FOR_TWO_FACTOR) {
-        // TODO: get real code from DB
-        clearInterval(interval);
-        resolve('12345678');
-      }
-    }, INTERVAL_FOR_TWO_FACTOR);
-  });
-};
+import { waitForTwoFactorCode } from './utils/two-factor';
+import { removeTwoFactorCode } from './db';
 
 export const getTagByString = (searchString: string): string =>
   searchString.toLowerCase().replace(/ /g, '');
@@ -73,7 +59,11 @@ export const getStorageStateAfterInstagramLogin = async (
     page.url().includes('https://www.instagram.com/accounts/login/two_factor')
   ) {
     console.log('Instagram Login Two Factor Page');
-    const verificationCode = await waitForTwoFactor();
+    
+    const verificationCode = await waitForTwoFactorCode(userCredentials);
+
+    await removeTwoFactorCode(userCredentials.username, userCredentials.type);
+
     await page.type('input[name="verificationCode"]', verificationCode, {
       delay: 30,
     });
