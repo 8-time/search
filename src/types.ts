@@ -36,7 +36,7 @@ export type IBrowserContextByUserCredentials = {
 };
 
 export type ISearchStringsByBrowserContexts = {
-  [key in string]: string[] | undefined;
+  [key in string]: string[];
 };
 
 export interface IGenerateSearchStringBySearchRawData extends ISearchOptions {

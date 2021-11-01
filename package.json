@@ -17,6 +17,7 @@
     "watch": "tsc -w",
     "start": "DOTENV_CONFIG_PATH=./.env.local node -r dotenv/config ./dist/index.js",
     "two-factor": "DOTENV_CONFIG_PATH=./.env.local node -r dotenv/config ./dist/scripts/two-factor.js",
+    "generate-links": "DOTENV_CONFIG_PATH=./.env.local node -r dotenv/config ./dist/scripts/generate-links.js",
     "prettier": "prettier --write ./src",
     "eslint": "eslint . --ext .ts",
     "migrate": "yarn knex migrate:latest --debug --knexfile ./dist/knexfile.js"

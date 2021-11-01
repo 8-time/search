@@ -60,7 +60,7 @@ export const getNameForStorageStateByUserCredential = (
 
 export const getKeyByUserCredential = (
   userCredential: IUserCredentials,
-): string => `${userCredential.type}-${userCredential.username}`;
+): string => `${userCredential.type}#${userCredential.username}`;
 
 export const getBrowserContextWithLoggedInStoregeState = async (
   userCredential: IUserCredentials,
@@ -205,10 +205,10 @@ export const generateSearchStringsCompanyOrProductsBySearchRawData = (
 export const getTypeForBrowserContextByUserCredentialsKey = (
   key: string,
 ): IUserCredentialsTypes | undefined => {
-  if (key.includes('facebook-')) {
+  if (key.includes('facebook#')) {
     return 'facebook';
   }
-  if (key.includes('instagram-')) {
+  if (key.includes('instagram#')) {
     return 'instagram';
   }
 };

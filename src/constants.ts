@@ -15,7 +15,7 @@ export const INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE = 5;
 export const FACEBOOK_PAGE_MAX_ATTEMPTS_SIZE = 5;
 
 export const ALLOW_GLOBAL = {
-  facebook: false,
+  facebook: true,
   instagram: true,
 };
 
