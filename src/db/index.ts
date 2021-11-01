@@ -4,7 +4,6 @@ import flatten from 'lodash/flatten';
 import fill from 'lodash/fill';
 import size from 'lodash/size';
 
-
 const sql = sqlite3.verbose();
 const db = new sql.Database(process.env.DB_FILE_NAME as string);
 
@@ -73,28 +72,27 @@ export const removeTwoFactorCode = async (
 
 export const removeAllLinksByCompanyOrProducts = async (): Promise<string> => {
   return await new Promise((resolve, reject) => {
-    db.run(
-      `DELETE FROM 'links-by-company-or-products'`,
-      [],
-      function (error) {
-        if (error !== null) {
-          reject(error.message);
-          return;
-        }
+    db.run(`DELETE FROM 'links-by-company-or-products'`, [], function (error) {
+      if (error !== null) {
+        reject(error.message);
+        return;
+      }
 
-        resolve(`Removed ${this.changes} rows`);
-      },
-    );
+      resolve(`Removed ${this.changes} rows`);
+    });
   });
 };
 
 export const addLinksByCompanyOrProducts = async (
-  values: Array<Array<string|number>>,
+  values: Array<Array<string | number>>,
 ): Promise<string> => {
   return await new Promise((resolve, reject) => {
     db.run(
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      `INSERT INTO 'links-by-company-or-products' (type,link,depth) VALUES ${fill(Array(size(values)), "(?, ?, ?)").join(",")}`,
+      `INSERT INTO 'links-by-company-or-products' (type,link,depth) VALUES ${fill(
+        Array(size(values)),
+        '(?, ?, ?)',
+      ).join(',')}`,
       flatten(values),
       function (error) {
         if (error !== null) {
@@ -108,30 +106,34 @@ export const addLinksByCompanyOrProducts = async (
   });
 };
 
-export const removeLinksByCompanyProductsIncidentKeywords = async (): Promise<string> => {
-  return await new Promise((resolve, reject) => {
-    db.run(
-      `DELETE FROM 'links-by-company-products-incident-keywords'`,
-      [],
-      function (error) {
-        if (error !== null) {
-          reject(error.message);
-          return;
-        }
+export const removeLinksByCompanyProductsIncidentKeywords =
+  async (): Promise<string> => {
+    return await new Promise((resolve, reject) => {
+      db.run(
+        `DELETE FROM 'links-by-company-products-incident-keywords'`,
+        [],
+        function (error) {
+          if (error !== null) {
+            reject(error.message);
+            return;
+          }
 
-        resolve(`Removed ${this.changes} rows`);
-      },
-    );
-  });
-};
+          resolve(`Removed ${this.changes} rows`);
+        },
+      );
+    });
+  };
 
 export const addLinksByCompanyProductsIncidentKeywords = async (
-  values: Array<Array<string|number>>,
+  values: Array<Array<string | number>>,
 ): Promise<string> => {
   return await new Promise((resolve, reject) => {
     db.run(
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      `INSERT INTO 'links-by-company-products-incident-keywords' (type,link,depth) VALUES ${fill(Array(size(values)), "(?, ?, ?)").join(",")}`,
+      `INSERT INTO 'links-by-company-products-incident-keywords' (type,link,depth) VALUES ${fill(
+        Array(size(values)),
+        '(?, ?, ?)',
+      ).join(',')}`,
       flatten(values),
       function (error) {
         if (error !== null) {
@@ -139,7 +141,9 @@ export const addLinksByCompanyProductsIncidentKeywords = async (
           return;
         }
 
-        resolve(`Add ${this.changes} links by company products incident keywords`);
+        resolve(
+          `Add ${this.changes} links by company products incident keywords`,
+        );
       },
     );
   });

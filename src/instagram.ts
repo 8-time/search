@@ -5,7 +5,6 @@ import uniq from 'lodash/uniq';
 import isEmpty from 'lodash/isEmpty';
 
 import {
-
   INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE,
   MAX_TIME_FOR_INSTAGRAM_TIMEOUT,
 } from './constants';
@@ -59,7 +58,7 @@ export const getStorageStateAfterInstagramLogin = async (
     page.url().includes('https://www.instagram.com/accounts/login/two_factor')
   ) {
     console.log('Instagram Login Two Factor Page');
-    
+
     const verificationCode = await waitForTwoFactorCode(userCredentials);
 
     await removeTwoFactorCode(userCredentials.username, userCredentials.type);

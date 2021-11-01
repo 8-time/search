@@ -9,7 +9,10 @@ import {
   getSearchStringsByBrowserContexts,
   getTypeForBrowserContextByUserCredentialsKey,
 } from '../utils';
-import { INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE,FACEBOOK_PAGE_MAX_ATTEMPTS_SIZE } from '../constants';
+import {
+  INSTAGRAM_PAGE_MAX_ATTEMPTS_SIZE,
+  FACEBOOK_PAGE_MAX_ATTEMPTS_SIZE,
+} from '../constants';
 import { createInstagramUrlForSearch } from '../instagram';
 import { createFacebookUrlForSearch } from '../facebook';
 import { IUserCredentials, ISearchRawData } from '../types';
@@ -17,7 +20,7 @@ import {
   addLinksByCompanyOrProducts,
   removeAllLinksByCompanyOrProducts,
   removeLinksByCompanyProductsIncidentKeywords,
-  addLinksByCompanyProductsIncidentKeywords
+  addLinksByCompanyProductsIncidentKeywords,
 } from '../db';
 
 void (async function () {
@@ -45,7 +48,7 @@ void (async function () {
               searchStringsBySearchRawData,
             );
 
-            const links: Array<Array<string | number>> = [];
+          const links: Array<Array<string | number>> = [];
 
           for (const key of keys(searchStringsByBrowserContexts)) {
             for (const searchString of searchStringsByBrowserContexts[key]) {
@@ -76,7 +79,6 @@ void (async function () {
       () => {},
       (argv: Arguments) => {
         async function make(): Promise<void> {
-
           const searchStringsCompanyOrProductsBySearchRawData =
             generateSearchStringsCompanyOrProductsBySearchRawData(
               searchRawData,

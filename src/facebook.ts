@@ -44,8 +44,6 @@ export const getStorageStateAfterFacebookLogin = async (
   await page.waitForTimeout(getRandomNumberToMax(15000, 3000));
   await page.waitForTimeout(15000);
 
-
-
   if (page.url().includes('https://www.facebook.com/checkpoint/?next')) {
     console.log('Facebook Login Two Factor Page');
     await page.click('#checkpointBottomBar a[role="button"]');
@@ -62,16 +60,13 @@ export const getStorageStateAfterFacebookLogin = async (
 
     const verificationCode = await waitForTwoFactorCode(userCredentials);
 
-
     await removeTwoFactorCode(userCredentials.username, userCredentials.type);
 
-   
     await page.type('input[name="approvals_code"]', verificationCode, {
       delay: 30,
     });
 
     await page.waitForTimeout(getRandomNumberToMax(5000, 3000));
-
 
     while (size(await page.$$('button[type="submit"]')) > 0) {
       await page.click('button[type="submit"]');
