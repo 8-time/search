@@ -119,7 +119,7 @@ export const grabAllLinksFromSearchPostPage = async (
       try {
         await Promise.race([
           page.waitForTimeout(getRandomNumberToMax(4000, 2000)),
-          scrollPageToBottom(page),
+          scrollPageToBottom(page, getRandomNumberToMax(500, 300) * (stepIndex + 1), getRandomNumberToMax(250, 20) / (stepIndex + 1)),
         ]);
       } catch (e) {
         console.log(

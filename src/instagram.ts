@@ -109,26 +109,38 @@ async function* makeSeqOfRequest(
   }
 
   while (attemptNumber > countOfAttempts) {
-    console.log('countOfAttempts', countOfAttempts);
 
-    const request = await Promise.race([
-      page.waitForRequest(/sections\//gi, {
-        timeout: MAX_TIME_FOR_INSTAGRAM_TIMEOUT,
-      }),
-      scrollPageToBottom(page),
-    ]);
+    let request = null;
+
+    try {
+      request = await Promise.race([
+        page.waitForRequest(/sections\//gi, {
+          timeout: MAX_TIME_FOR_INSTAGRAM_TIMEOUT,
+        }),
+        scrollPageToBottom(page, getRandomNumberToMax(500, 300) * (countOfAttempts + 1), getRandomNumberToMax(250, 20) / (countOfAttempts + 1)),
+      ]);
+    } catch (e) {
+      console.log('Error request', e);
+    }
 
     if (request == null) {
       return null;
     }
 
-    const response = await request.response();
+    let response = null;
+
+    try {
+      response = await request.response();
+    } catch (e) {
+      console.log('Error while response', e);
+    }
 
     await page.waitForTimeout(getRandomNumberToMax(5000, 1000));
 
-    if (response === null) {
+    if (response == null) {
       return null;
     }
+    
     const json = (await response.json()) as IInstagramJsonResponseResent;
 
     if (json.sections == null) {

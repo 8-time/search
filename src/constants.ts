@@ -19,4 +19,4 @@ export const ALLOW_GLOBAL = {
   instagram: true,
 };
 
-export const MAX_TIME_FOR_INSTAGRAM_TIMEOUT = 60 * 1000;
+export const MAX_TIME_FOR_INSTAGRAM_TIMEOUT = 60 * 5 * 1000;
